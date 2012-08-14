@@ -96,4 +96,4 @@ See also the examples/home.php template example
 
 ## Output Examples
 
-![Example output](Basic Example Site.png)
+![Example output](examples/Basic Example Site.png)
