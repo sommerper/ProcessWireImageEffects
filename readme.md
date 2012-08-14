@@ -96,4 +96,4 @@ See also the examples/home.php template example
 
 ## Output Examples
 
-![Example output](examples/Basic Example Site.png)
+![Example output](https://raw.github.com/sommerper/ProcessWireImageEffects/ProcessWireImageEffects/examples/Basic%20Example%20Site.png)
