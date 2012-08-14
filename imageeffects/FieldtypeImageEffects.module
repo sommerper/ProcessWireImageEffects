@@ -1,0 +1,462 @@
+<?php
+
+	/*
+	 * Image Effects for Processwire by Per Sommer (www.persommer.com)
+	 * An easy way to add effects to images following the standard Processwire syntax
+	 * Some inspiration came from the excellent article at http://net.tutsplus.com/tutorials/php/create-instagram-filters-with-php/
+	 * This was tested with ImageMagick 6.7.8-3 2012-08-08 Q16 http://www.imagemagick.org
+	 *
+	 */
+//TODO: Blur
+//TODO: Sharpen
+//TODO: Noise
+//TODO: Brightness
+//TODO: Saturation
+//TODO: Masking
+
+	class FieldtypeImageEffects extends FieldtypeImage implements Module
+	{
+		const FX_SEPIA      = "fxSepia";
+		const FX_GOTHAM     = "fxGotham";
+		const FX_TOASTER    = "fxToaster";
+		const FX_NASHVILLE  = "fxNashville";
+		const FX_LOMO       = "fxLomo";
+		const FX_KELVIN     = "fxKelvin";
+		const FX_DREAMY     = "fxDreamy";
+		const FX_ADD        = "fxAdd";
+		const FX_COLORIZE   = "fxColorize";
+		const FX_WATERMARK  = "fxWatermark";
+		const FX_FOCAL_BLUR = "fxFocalBlur";
+		const FX_BLUR       = "fxBlur";
+
+		const BLEND_NORMAL       = "";
+		const BLEND_OVERLAY      = "overlay";
+		const BLEND_SCREEN       = "screen";
+		const BLEND_EXCLUSION    = "Exclusion";
+		const BLEND_LINEAR_DODGE = "linear_dodge";
+		const BLEND_LINEAR_BURN  = "linear_burn";
+		const BLEND_LINEAR_LIGHT = "linear_light";
+		const BLEND_HARD_LIGHT   = "hard_light";
+		const BLEND_SOFT_LIGHT   = "soft_light";
+		const BLEND_PEGTOP_LIGHT = "pegtop_light";
+		const BLEND_PIN_LIGHT    = "pin_light";
+		const BLEND_COLOR_DODGE  = "color_dodge";
+		const BLEND_COLOR_BURN   = "color_burn";
+		const BLEND_VIVID_LIGHT  = "vivid_light";
+
+		const IMG_POLAROID_01  = "##PATHTOIFX##polaroid01.png";
+		const IMG_WATERMARK_01 = "##PATHTOIFX##watermark01.png";
+		const IMG_SCRATCHES_01 = "##PATHTOIFX##scratches01.png";
+		const IMG_SCRATCHES_02 = "##PATHTOIFX##Scrathes_ii_by_struckdumb.jpeg";
+		const IMG_SCRATCHES_03 = "##PATHTOIFX##grainy_scratches_texture_by_ninja_pi.png";
+
+		const VAR_FORCE_ALPHA = "forceAlpha";
+
+		private $imgWidth = 0;
+		private $imgHeight = 0;
+		private $fxCurrent = "";
+		private $imgBaseName = "";
+		private $imgPath = "";
+		private $event;
+		private $eventObj;
+		private $args;
+		private $strModuleLocation;
+
+		private $testRun = true;
+
+		public static function getModuleInfo()
+		{
+			return array
+			(
+				'title'    => 'Image Effects',
+				'version'  => 001,
+				'summary'  => 'Add effects to images',
+				'href'     => 'http://www.persommer.com',
+			);
+		}
+
+		public function init()
+		{
+			if (!self::isHooked('Pageimage::fx()'))
+			{
+				$this->strModuleLocation = $_SERVER['DOCUMENT_ROOT'] . "/site/modules/imageeffects/";
+				$this->addHook('Pageimage::fx', $this, 'fx');
+			}
+		}
+
+		public function fx(HookEvent $event)
+		{
+			$this->fxCurrent   = $event->arguments[0];
+			$this->imgWidth    = $event->object->width;
+			$this->imgHeight   = $event->object->height;
+			$this->imgBaseName = $event->object->basename;
+			$this->imgPath     = $event->object->pagefiles->path;
+			$this->event       = $event;
+			$this->eventObj    = $event->object;
+			$this->args        = $event->arguments;
+
+			switch ($event->arguments[0])
+			{
+				case $this::FX_FOCAL_BLUR:
+					$this->fxFocalBlur();
+					break;
+				case $this::FX_BLUR:
+					$this->fxBlur();
+					break;
+				case $this::FX_SEPIA:
+					$this->fxSepia();
+					break;
+				case $this::FX_GOTHAM:
+					$this->fxGotham();
+					break;
+				case $this::FX_TOASTER:
+					$this->fxToaster();
+					break;
+				case $this::FX_NASHVILLE:
+					$this->fxNashville();
+					break;
+				case $this::FX_LOMO:
+					$this->fxLomo();
+					$this->vignette('ff9966', 'none');
+					break;
+				case $this::FX_KELVIN:
+					$this->fxKelvin();
+					break;
+				case $this::FX_DREAMY:
+					$this->fxDreamy();
+					break;
+				case $this::FX_ADD:
+					$this->fxAdd();
+					break;
+				case $this::FX_WATERMARK:
+					$this->fxWatermark();
+					break;
+				default:
+
+
+			}
+			$event->return = $this->eventObj;
+		}
+
+
+		private function fxGotham()
+		{
+			isset($this->args[1]) ? $intColorize = $this->args[1] : $intColorize = 20;
+			isset($this->args[2]) ? $floatGamma = $this->args[2] : $floatGamma = 0.5;
+
+			$imgBaseNameNew = $this->appendToFileName($this->fxCurrent . $intColorize . $floatGamma);
+
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->imgBaseName = $imgBaseNameNew;
+				$strExe            = "convert '$imgPathFullCurr' -modulate 120,10,100 -fill '#222b6d' -colorize $intColorize -gamma $floatGamma -contrast -contrast '$imgPathFullNew'";
+				$this->execute($strExe);
+
+			}
+			$this->updateBaseName($imgBaseNameNew);
+
+			// $pageimage = clone $event->object;
+			// $pageimage->setFilename($imgBaseNameNew);
+			// $pageimage->setOriginal($event->object);
+			// return $pageimage;
+		}
+
+		private function updateBaseName($fileName)
+		{
+			$this->imgBaseName = $fileName;
+			$this->eventObj->setFilename($fileName);
+		}
+
+
+		private function fxToaster()
+		{
+			isset($this->args[1]) ? $floatGamma = $this->args[1] : $floatGamma = 1.2;
+
+			$imgBaseNameNew = $this->appendToFileName($this->fxCurrent . $floatGamma);
+
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->eventObj->pagefiles->path . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute($this->colortone($imgPathFullCurr, $imgPathFullNew, "330000", 90, 0));
+				$this->execute("convert '$imgPathFullNew' -modulate 150,80,100 -gamma $floatGamma -contrast -contrast '$imgPathFullNew'");
+				$this->execute($this->vignette($imgPathFullNew, $imgPathFullNew, 'none', 'LavenderBlush3'));
+				$this->execute($this->vignette($imgPathFullNew, $imgPathFullNew, 'ff9966', 'none'));
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		public function vignette($fileInput, $fileOutput, $color_1 = 'none', $color_2 = '000000', $crop_factor = 1.5)
+		{
+			($color_1 != "none") ? $color_1 = "#" . $color_1 : $color_1 = $color_1;
+			($color_2 != "none") ? $color_2 = "#" . $color_2 : $color_2 = $color_2;
+			$crop_x      = floor($this->imgWidth * $crop_factor);
+			$crop_y      = floor($this->imgHeight * $crop_factor);
+			$strVignette = "convert ( '$fileInput' ) ( -size {$crop_x}x{$crop_y} radial-gradient:$color_1-$color_2 -gravity center -crop {$this->imgWidth}x{$this->imgHeight}+0+0 +repage ) -compose multiply -flatten '$fileOutput'";
+			return $strVignette;
+		}
+
+
+		public function colortone($fileIn, $fileOut, $color, $level, $type = 0)
+		{
+			$args[0]      = $level;
+			$args[1]      = 100 - $level;
+			$negate       = $type == 0 ? '-negate' : '';
+			$strColortone = "convert '$fileIn' ( -clone 0 -fill '#$color' -colorize 100% ) ( -clone 0 -colorspace gray $negate ) -compose blend -define compose:args=$args[0],$args[1] -composite '$fileOut'";
+			return $strColortone;
+		}
+
+		private function fxNashville()
+		{
+			isset($this->args[1]) ? $floatGamma = $this->args[1] : $floatGamma = 2.2;
+			isset($this->args[2]) ? $alpha = $this->args[2] : $alpha = 100;
+
+			$imgBaseNameNew  = $this->appendToFileName("nashville" . $floatGamma);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute($this->colortone($imgPathFullCurr, $imgPathFullNew, '222b6d', 100, 0));
+				$this->execute($this->colortone($imgPathFullNew, $imgPathFullNew, 'f7daae', 100, 1));
+				$this->execute("convert '$imgPathFullNew' -contrast -modulate 100,150,100 -auto-gamma '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxSepia()
+		{
+			isset($this->args[1]) ? $tone = $this->args[1] : $tone = 65;
+
+			$imgBaseNameNew  = $this->appendToFileName("sepia" . $tone);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' -sepia-tone $tone% '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxFocalBlur()
+		{
+			isset($this->args[1]) ? $blurAmount = $this->args[1] : $blurAmount = 20;
+
+			$imgBaseNameNew  = $this->appendToFileName("focalblur" . $blurAmount);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			$imgCenterX = round($this->imgWidth / 2);
+			$imgCenterY = round($this->imgHeight / 2);
+			$blurWidth  = round($this->imgWidth * 0.8);
+			$blurHeight = round($this->imgHeight * 0.8);
+			$blurX      = round($this->imgWidth * 0.1);
+			$blurY      = round($this->imgHeight * 0.1);
+
+// convert logo:  \( -clone 0 -blur 5x2 \) \
+//		>           \( -clone 0 -gamma 0  -fill white \
+//		>              -draw 'rectangle 220 180 320 280'  -blur 10x5 \
+// \) -composite   logo.png
+
+
+			//$this->execute("convert '$imgPathFullCurr' ( -clone 0 -scale 10% -scale 1000% ) ( -clone 0 -gamma 0 -fill white -draw 'circle $imgCenterX,$imgCenterY $blurWidth,$blurHeight' -blur 100x100 -negate ) -composite '$imgPathFullNew'");
+			//$this->execute("convert '$imgPathFullCurr' ( -clone 0 -blur 20x20 ) ( -fill rgba(222,0,0,1) -draw 'rectangle 0,0 {$this->imgWidth},{$this->imgHeight}' ) ( -clone 0 -gamma 0 -fill white -draw 'circle $imgCenterX,$imgCenterY $blurWidth,$blurHeight' -blur 100x100 ) -composite '$imgPathFullNew'");
+			//$this->execute("convert '$imgPathFullCurr' ( -clone 0 -blur 20x20 ) ( -fill rgba(222,0,0,1) -draw 'rectangle 0,0 {$this->imgWidth},{$this->imgHeight}' ) -composite '$imgPathFullNew'");
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' ( -clone 0 -blur {$blurAmount}x{$blurAmount} ) ( -clone 0 -gamma 0 -fill white -draw 'circle $imgCenterX,$imgCenterY $blurWidth,$blurHeight' -blur {$blurX}x{$blurY} -negate ) -composite '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxBlur()
+		{
+			isset($this->args[1]) ? $blurAmount = $this->args[1] : $blurAmount = 20;
+
+			$imgBaseNameNew  = $this->appendToFileName("blur" . $blurAmount);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			$imgCenterX = round($this->imgWidth / 2);
+			$imgCenterY = round($this->imgHeight / 2);
+			$blurWidth  = round($this->imgWidth * 0.8);
+			$blurHeight = round($this->imgHeight * 0.8);
+			$blurX      = round($this->imgWidth * 0.1);
+			$blurY      = round($this->imgHeight * 0.1);
+
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' -blur {$blurAmount}x{$blurAmount} '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+
+		private function fxLomo()
+		{
+			isset($this->args[1]) ? $intLevelR = $this->args[1] : $intLevelR = 33;
+			isset($this->args[2]) ? $intLevelG = $this->args[2] : $intLevelG = 33;
+
+			$imgBaseNameNew  = $this->appendToFileName("lomo" . $intLevelR . $intLevelG);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' -channel R -level $intLevelR% -channel G -level $intLevelG% '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxKelvin()
+		{
+			// isset($this->args[1]) ? $intLevelR = $this->args[1] : $intLevelR = 33;
+
+			$imgBaseNameNew  = $this->appendToFileName("kelvin");
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' -auto-gamma -modulate 120,50,100 -fill rgba(255,153,0,0.5) -draw 'rectangle 0,0 {$this->imgWidth},{$this->imgHeight}' '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxDreamy()
+		{
+			// isset($this->args[1]) ? $intLevelR = $this->args[1] : $intLevelR = 33;
+
+			$imgBaseNameNew  = $this->appendToFileName("dreamy");
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+
+			if (!is_file($imgPathFullNew))
+			{
+				$this->execute("convert '$imgPathFullCurr' ( -clone 0 -colorspace gray -blur 10x10 -alpha on -channel Alpha -evaluate Set 100% ) -compose " . $this::BLEND_LINEAR_DODGE . " -composite '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxWatermark()
+		{
+			isset($this->args[1]) ? $fileWatermark = $this->args[1] : $fileWatermark = "";
+
+			$fileWatermark   = str_replace("##PATHTOIFX##", $this->strModuleLocation . "images/", $fileWatermark);
+			$watermark_parts = pathinfo($fileWatermark);
+
+			$imgBaseNameNew  = $this->appendToFileName("watermark" . $watermark_parts['filename']);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+
+				$this->execute("convert '$imgPathFullCurr' ( '$fileWatermark' -matte -channel A -evaluate multiply 0.15 +channel ) -gravity center -composite '$imgPathFullNew'");
+			}
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+		private function fxAdd()
+		{
+			isset($this->args[1]) ? $layerFile = $this->args[1] : $layerFile = $this::IMG_SCRATCHES_01;
+			isset($this->args[2]) ? $alpha = $this->args[2] : $alpha = 100;
+			isset($this->args[3]) ? $blendType = $this->args[3] : $blendType = "";
+			isset($this->args[4]) ? $forceAlpha = $this->args[4] : $forceAlpha = "";
+			$this->addLayer($layerFile, $alpha, $blendType, $forceAlpha);
+		}
+
+		private function sanitizeShellCommand($str)
+		{
+			$str = str_replace("(", "\(", $str);
+			$str = str_replace(")", "\)", $str);
+			return $str;
+		}
+
+		private function execute($command)
+		{
+//			echo("<br>" . "COMMAND INPUT: " . $command . "<br>");
+			$command = $this->sanitizeShellCommand($command);
+			$out     = array();
+			putenv("PATH=" . $_ENV["PATH"] . ":/opt/local/bin");
+			exec($command . " 2>&1", $out);
+			if (!empty($out))
+			{
+				echo("<br>" . "COMMAND OUTPUT: " . print_r($out, true) . "<br>");
+			}
+		}
+
+		private function appendToFileName($prefix)
+		{
+			$prefix     = $this->sanitizeFilename("_" . $prefix);
+			$path_parts = pathinfo($this->imgPath . $this->imgBaseName);
+			return $path_parts['filename'] . $prefix . "." . $path_parts['extension'];
+		}
+
+		private function sanitizeFilename($strFilename)
+		{
+			$strFilename = str_replace(".", "", $strFilename);
+			return $strFilename;
+		}
+
+
+		public function border($input, $color = 'black', $width = 20)
+		{
+			$this->execute("convert $input -bordercolor $color -border " . $width . "x" . $width . " $input");
+		}
+
+		public function addLayer($layer, $alpha, $blendType = "", $forceAlpha = "")
+		{
+			$strLayerPath = str_replace("##PATHTOIFX##", $this->strModuleLocation . "images/", $layer);
+
+			$layer_parts   = pathinfo($strLayerPath);
+			$layerbasename = $layer_parts['filename'] . "." . $layer_parts['extension'];
+
+			$imgBaseNameNew  = $this->appendToFileName("add" . $layerbasename . $alpha . $blendType . $forceAlpha);
+			$imgPathFullCurr = $this->imgPath . $this->imgBaseName;
+			$imgPathFullNew  = $this->imgPath . $imgBaseNameNew;
+
+			if (!is_file($imgPathFullNew))
+			{
+				//$strLayerPath = $this->strModuleLocation . $layer;
+
+				$unsharp    = "-unsharp 1.5×1.0+1.5+0.02";
+				$strFlatten = "";
+
+				$strAlpha = "";
+
+				if ($forceAlpha == $this::VAR_FORCE_ALPHA)
+				{
+					$strAlpha = " -alpha on -channel Alpha -evaluate Set $alpha%";
+				}
+
+				$strBlend = "";
+				if ($blendType != "")
+				{
+					$strBlend = " -compose $blendType -composite";
+				}
+				else
+				{
+					$strFlatten = " -flatten";
+				}
+
+				$strExe = "convert '$imgPathFullCurr' ( '$strLayerPath' -resize {$this->imgWidth}x{$this->imgHeight}! $unsharp ) {$strAlpha}{$strBlend}{$strFlatten} '$imgPathFullNew'";
+				$this->execute($strExe);
+			}
+
+			$this->updateBaseName($imgBaseNameNew);
+		}
+
+
+	}
+
+
