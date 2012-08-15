@@ -3,14 +3,59 @@
 
 ## Description
 
-
 A module that makes it easy to add effects to images in ProcessWire <http://www.processwire.com>
-Note that this module may increase your amount of images dramatically.
+
+Note that this module may increase your amount of images (and storage needed) dramatically.
+
+### Effects
+
+* Sepia
+* Gotham
+* Toaster
+* Nashville
+* Lomo
+* Kelvin
+* Dreamy
+* Add (layer)
+* Colorize
+* Watermark
+* Blur
+* Focal blur
+
+### Blend modes
+
+* Normal
+* Overlay
+* Screen
+* Exclusion
+* Linear dodge
+* Linear burn
+* Linear light
+* Hard light
+* Soft light
+* Pegtop light
+* Pin light
+* Color dodge
+* Color burn
+* Vivid light
+
+
+### Sources
+
+A few images have been added for testing purposes.
+
+* polaroid01.png <http://4.bp.blogspot.com/_j2KwLbD2Bsg/R6DEUG2tiiI/AAAAAAAAATk/dRPhU6O84f8/s1600-h/ice_in_a_strainer.polaroid>
+* scratches01.png <http://www.q-rls.com/index.php/grunge-frames-psd-template>
+* Scrathes_ii_by_struckdumb.jpeg <http://struckdumb.deviantart.com/art/Scratches-ii-84500874>
+* grainy_scratches_texture_by_ninja_pi.png <http://ninja-pi.deviantart.com/art/grainy-scratches-texture-117278371>
+
 
 ## Installation
 
-
 Drage the "imageeffects" folder to your modules directory.
+
+### Requirements
+ImageMagic convert must be available on the server.
 
 ## Usage Examples
 
