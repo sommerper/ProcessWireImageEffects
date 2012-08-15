@@ -4,7 +4,7 @@
 ## Description
 
 
-A module that makes it easy to add effects to images in ProcessWire <http://www.processwire.org>
+A module that makes it easy to add effects to images in ProcessWire <http://www.processwire.com>
 
 ## Installation
 
