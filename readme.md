@@ -5,6 +5,7 @@
 
 
 A module that makes it easy to add effects to images in ProcessWire <http://www.processwire.com>
+Note that this module may increase your amount of images dramatically.
 
 ## Installation
 
